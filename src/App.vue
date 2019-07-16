@@ -2199,7 +2199,8 @@ export default {
       const that = this;
       that.diaTableUpdateMark = __data;
       console.log("__keys.indexOf(__data.key)");
-      let labelCN = that.$writeType["webSetting"][__data.key + "_options"];
+      console.log(__data);
+      let labelCN = that.$writeType[__data.ele][__data.key + "_options"];
       let __arr = __data.value.split("||");
       __arr.forEach((element, index) => {
         let __arr2 = element.split("|");

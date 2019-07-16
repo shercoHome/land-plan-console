@@ -1,1 +1,1 @@
-http://apiforadmin.dachengplan.com/||http://apiforplan.dachengplan.com/
+http://duke.com/tools/vue-plan-api/api_admin_sql/||http://duke.com/tools/vue-plan-api/api_plan_data/
