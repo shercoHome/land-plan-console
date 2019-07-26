@@ -1,5 +1,6 @@
 <template>
   <div id="app">
+    <!-- 登录 -->
     <el-dialog
       :visible="true"
       v-if="loginForm.visible"
@@ -33,21 +34,64 @@
 
     <!-- 修改密码 -->
 
-    <el-dialog title="修改密码" :visible.sync="changePSW.visible" center>
-      <el-form :model="changePSW" style="width:50%;margin:0 auto">
-        <el-form-item label="旧密码">
+    <el-dialog title="修改密码" :visible.sync="changePSW.visible" center :close-on-click-modal="false">
+      <el-form :model="changePSW" ref="changePSW" style="width:50%;margin:0 auto">
+        <el-form-item label="旧密码" prop="oldPSW">
           <el-input type="password" required v-model="changePSW.oldPSW" autocomplete="off"></el-input>
         </el-form-item>
-        <el-form-item label="新密码">
+        <el-form-item label="新密码" prop="newPSW">
           <el-input type="password" required v-model="changePSW.newPSW" autocomplete="off"></el-input>
         </el-form-item>
-        <el-form-item label="重复新密码">
+        <el-form-item label="重复新密码" prop="reNewPSW">
           <el-input type="password" required v-model="changePSW.reNewPSW" autocomplete="off"></el-input>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="changePSW.visible = false">取 消</el-button>
+        <el-button @click="$refs['changePSW'].resetFields();">重 置</el-button>
         <el-button type="primary" @click="fn_change_psw">确 定</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 发送站内消息 -->
+
+    <el-dialog
+      title="发送站内消息"
+      :visible.sync="addLetter.visible"
+      center
+      :close-on-click-modal="false"
+    >
+      <el-form :model="addLetter" :rules="addLetter.rules" ref="addLetter">
+        <el-form-item label="会员列表" prop="userList">
+          <el-radio-group v-model="addLetter.radio">
+            <el-radio label="1">在下方输入（多个账号以英文逗号分割）</el-radio>
+            <el-radio label="0">所有线下会员</el-radio>
+          </el-radio-group>
+          <el-input
+            type="text"
+            :disabled="addLetter.radio==0"
+            :required="addLetter.radio==1"
+            v-model="addLetter.userList"
+            autocomplete="off"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="标题" prop="title">
+          <el-input type="text" required v-model="addLetter.title" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item label="内容" prop="content">
+          <el-input
+            type="textarea"
+            :autosize="{ minRows: 5, maxRows: 8}"
+            required
+            v-model="addLetter.content"
+            autocomplete="off"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="addLetter.visible = false">取 消</el-button>
+        <el-button @click="$refs['addLetter'].resetFields();">重 置</el-button>
+        <el-button type="primary" @click="fn_add_letter('addLetter')">确 定</el-button>
       </div>
     </el-dialog>
 
@@ -190,10 +234,22 @@
         <el-button v-if="isAdmin" @click="fn_bulletin_to_editor" icon="el-icon-edit">修改公告</el-button>
         <el-button @click="changePSW.visible=true" icon="el-icon-setting">修改密码</el-button>
         <el-button @click="__loginOut" type="danger" icon="el-icon-guide">安全退出</el-button>
+        <label class="overview">
+          <b>{{userInfo.userName}}，您好！</b>会员概况：总注册
+          <b>{{overview.register_all}}</b>，
+          今日注册
+          <b>{{overview.register_today}}</b>（昨
+          <b>{{overview.register_yestoday}}</b>），
+          今日登录
+          <b>{{overview.login_today}}</b>，当前在线
+          <b>{{overview.online_now}}</b>
+        </label>
+        <el-button type="info" @click="fn_get_overview" icon="el-icon-refresh" circle></el-button>
         <el-divider></el-divider>
         <div v-html="bulletin" :style="{height:fullHeight-50+'px',overflow:'scroll'}"></div>
         <!-- <iframe src="https://www.biqugetv.com/1_1721/" style="width:100%"></iframe> -->
       </el-tab-pane>
+
       <!-- 第二个选项，代理网站 -->
       <el-tab-pane label="代理网站">
         <template>
@@ -279,7 +335,14 @@
             >
               <template slot-scope="prop">{{prop.row.userID}}</template>
             </el-table-column>
-            <el-table-column v-if="isAdmin" prop="agentName" label="归属代理" width="100" sortable :key="Math.random()"></el-table-column>
+            <el-table-column
+              v-if="isAdmin"
+              prop="agentName"
+              label="归属代理"
+              width="100"
+              sortable
+              :key="Math.random()"
+            ></el-table-column>
             <el-table-column prop="siteLink" sortable label="专属网址">
               <template slot-scope="prop">
                 <span class="nowrap">
@@ -296,13 +359,12 @@
             </el-table-column>
             <el-table-column prop="id" label="网站ID" sortable width="90" v-if="isAdmin"></el-table-column>
             <el-table-column prop="siteConfig" label="网站名称" sortable>
-               <template slot-scope="prop">
-                 {{prop.row.siteConfig.split('||')[0].split('|')[0]}}
-              </template>
+              <template slot-scope="prop">{{prop.row.siteConfig.split('||')[0].split('|')[0]}}</template>
             </el-table-column>
           </el-table>
         </template>
       </el-tab-pane>
+
       <!-- 第三个选项，计划授权 authorizeList -->
       <el-tab-pane label="计划授权">
         <template>
@@ -557,10 +619,15 @@
               :key="Math.random()"
             ></el-table-column>
 
-
             <el-table-column prop="registerTime" label="注册时间" width="150" sortable></el-table-column>
             <el-table-column prop="registerIP" label="注册IP" width="125" sortable></el-table-column>
-            <el-table-column prop="shareCode" label="分享" width="100" sortable :sort-method="sortMethodShareIPCount">
+            <el-table-column
+              prop="shareCode"
+              label="分享"
+              width="100"
+              sortable
+              :sort-method="sortMethodShareIPCount"
+            >
               <template slot-scope="prop">
                 <el-badge
                   v-if="prop.row.shareIPCount && prop.row.shareIPCount>0"
@@ -575,8 +642,8 @@
                   >查看</el-button>
                 </el-badge>
                 <el-badge v-else :value="prop.row.shareIPCount" type="info" class="badgeitem">
-                    <el-button @click="fn_alert('暂无分享数据')" size="mini">查看</el-button>
-                  </el-badge>
+                  <el-button @click="fn_alert('暂无分享数据')" size="mini">查看</el-button>
+                </el-badge>
               </template>
             </el-table-column>
             <el-table-column prop="userLevel" label="角色" width="80" sortable>
@@ -625,7 +692,6 @@
       </el-tab-pane>
 
       <!-- 第五个选项， 代理归属 myuser -->
-
       <el-tab-pane label="代理归属">
         <template>
           <el-row type="flex" class="row-bg" justify="space-around">
@@ -704,6 +770,7 @@
           <!-- /////////////////////////////////////// -->
         </template>
       </el-tab-pane>
+
       <!-- 第六个选项， 计划设置 planList -->
       <el-tab-pane label="计划设置" v-if="isAdmin">
         <template>
@@ -819,6 +886,147 @@
           </el-table>
         </template>
       </el-tab-pane>
+
+      <!-- 第七个选项，站内消息 -->
+      <el-tab-pane label="站内消息">
+        <template>
+          <el-row :gutter="10">
+            <el-col :xs="22" :sm="9" :md="8" :lg="8" :xl="8">
+              <el-autocomplete
+                class="inline-input el-autocomplete-short"
+                v-model="tempValueForSearch"
+                :fetch-suggestions="querySearch"
+                placeholder="请填写账号"
+              >
+                <el-select
+                  v-model="letterSelectPicked"
+                  slot="prepend"
+                  placeholder="请选择"
+                  class="select-short"
+                >
+                  <el-option-group>
+                    <el-option label="代理账号" value="searchAgent"></el-option>
+                    <el-option label="会员账号" value="search"></el-option>
+                  </el-option-group>
+                </el-select>
+
+                <el-select
+                  v-model="sortSelectPicked"
+                  slot="append"
+                  placeholder="请选择"
+                  class="select-short"
+                  style="margin-right:.5em"
+                >
+                  <el-option-group>
+                    <el-option label="发送时间倒序" value="1"></el-option>
+                    <el-option label="发送时间顺序" value="2"></el-option>
+                    <el-option label="会员注册倒序" value="3"></el-option>
+                    <el-option label="会员注册顺序" value="4"></el-option>
+                    <el-option label="消息未读在前" value="5"></el-option>
+                    <el-option label="消息已读在前" value="6"></el-option>
+                  </el-option-group>
+                </el-select>
+
+                <el-button
+                  v-if="letterSelectPicked=='searchAgent'"
+                  slot="append"
+                  @click="loadPage=1;fn_get_my_letterList()"
+                  icon="el-icon-search"
+                >搜索</el-button>
+                <el-button
+                  v-else
+                  slot="append"
+                  @click="loadPage=1;fn_get_my_letterList('userName')"
+                  icon="el-icon-search"
+                >搜索</el-button>
+              </el-autocomplete>
+            </el-col>
+
+            <el-col :xs="22" :sm="9" :md="6" :lg="6" :xl="4">
+              每次加载
+              <el-input-number
+                v-model="loadLimit"
+                :step="10"
+                controls-position="right"
+                :min="20"
+                size="mini"
+              ></el-input-number>条
+            </el-col>
+
+            <el-col :xs="22" :sm="4" :md="3" :lg="3" :xl="2">
+              <el-button
+                @click="letterSelectPicked='searchAgent';tempValueForSearch='';loadPage=1;fn_get_my_letterList()"
+                type="primary"
+              >刷新列表</el-button>
+            </el-col>
+            <el-col :xs="22" :sm="4" :md="3" :lg="3" :xl="2">
+              <el-button @click="addLetter.visible=true;" type="info">发送消息</el-button>
+            </el-col>
+          </el-row>
+
+          <el-table
+            :data="letterList"
+            style="width: 100%"
+            :height="fullHeight"
+            v-loadmore="fn_load_myletterList"
+          >
+            <el-table-column type="index" :index="1" sortable></el-table-column>
+            <el-table-column prop="userName" label="账号" sortable width="140"></el-table-column>
+
+            <el-table-column
+              v-if="isAdmin"
+              prop="userID"
+              label="会员ID"
+              sortable
+              width="90"
+              :sort-method="sortMethodUserID"
+              :key="Math.random()"
+            >
+              <template slot-scope="prop">{{prop.row.userID}}</template>
+            </el-table-column>
+
+            <el-table-column prop="isRead" label="已读" sortable width="80">
+              <template slot-scope="prop">{{prop.row.isRead=="1"?"已读":"未读"}}</template>
+            </el-table-column>
+
+            <el-table-column prop="title" label="标题" sortable>
+              <template slot-scope="prop">
+                <el-button
+                  @click="fn_true_alert(prop.row.content,prop.row.title)"
+                  type="primary"
+                  icon="el-icon-thumb"
+                  size="mini"
+                  circle
+                ></el-button>
+                {{prop.row.title}}
+              </template>
+            </el-table-column>
+
+            <el-table-column prop="createTime" label="发送时间" width="150" sortable></el-table-column>
+            <!-- v-if="isAdmin" -->
+            <el-table-column
+              prop="createrName"
+              label="发送人"
+              width="100"
+              sortable
+            ></el-table-column>
+
+            <el-table-column label="操作">
+              <template slot-scope="prop">
+                <el-button
+                  type="danger"
+                  @click="fn_delete_letter_by_id(prop.row)"
+                  icon="el-icon-delete"
+                  size="mini"
+                  circle
+                ></el-button>
+              </template>
+            </el-table-column>
+
+            <el-table-column prop="id" label="消息ID" sortable width="90" v-if="isAdmin"></el-table-column>
+          </el-table>
+        </template>
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -835,13 +1043,69 @@ export default {
     TinymceEditor
   },
   data() {
+    const that = this;
+    var validateUserlist = (rule, value, callback) => {
+      let arr_value = value.split(",");
+      if (that.addLetter.radio == "0") {
+        callback();
+      }
+      arr_value.forEach((element, index) => {
+        if (!that.$pattJson["userName"].test(element)) {
+          callback(new Error("第" + (index + 1) + "个会员账号格式有误"));
+        }
+      });
+      callback();
+    };
+
     return {
       key: 0,
       fullHeight: "800",
       bulletin: "欢迎回来",
       myAPI: "",
       myPlanAPI: "",
-      userInfo: { id: "" },
+      userInfo: { id: "", userName: "none" },
+
+      addLetter: {
+        radio: "1",
+        userList: "",
+        title: "",
+        content: "",
+        labelWidth: "",
+        visible: false,
+        rules: {
+          userList: [
+            { validator: validateUserlist, trigger: "change" },
+            { validator: validateUserlist, trigger: "blur" }
+          ],
+          title: [
+            { required: true, message: "请输入标题", trigger: "change" },
+            {
+              min: 2,
+              max: 20,
+              message: "长度在 2 到 20 个字符",
+              trigger: "blur"
+            }
+          ],
+          content: [
+            { required: true, message: "请输入内容", trigger: "change" },
+            {
+              min: 2,
+              max: 200,
+              message: "长度在 2 到 200 个字符",
+              trigger: "blur"
+            }
+          ]
+        }
+      },
+
+      overview: {
+        login_today: "**",
+        online_now: "**",
+        register_all: "**",
+        register_today: "**",
+        register_yestoday: "**"
+      },
+
       loginUserLimit: {
         create_user_3: "0",
         create_user_2: "0",
@@ -896,6 +1160,9 @@ export default {
       planSelectPicked: "search",
       planList: [],
 
+      letterSelectPicked: "searchAgent",
+      letterList: [],
+
       myEditor: {
         title: "活动编辑器",
         content: "你好，欢迎使用！",
@@ -947,6 +1214,13 @@ export default {
     }
   },
   watch: {
+    // "addLetter.radio"(val, oldVal) {
+    //   this.addLetter.rules.userList =
+    //     val == "1"
+    //       ? [{ validator: this.validateUserlist, trigger: "change" }]
+    //       : [];
+    //   console.log(this.addLetter.rules.userList.required);
+    // },
     tempValueForSearch() {
       const that = this;
       that.timerMark = setTimeout(function() {
@@ -1055,6 +1329,8 @@ export default {
       const that = this;
 
       const id = event.target.getAttribute("id");
+
+      console.log("click", id); //获取到当前元素的i
       switch (id) {
         case "tab-1":
           //代理网站——获取当前登录者的所有线下网站列表
@@ -1072,8 +1348,15 @@ export default {
         case "tab-4":
           that.tempValueForSearch = "";
           break;
+        case "tab-5":
+          that.tempValueForSearch = "";
+          break;
+        case "tab-6":
+          that.tempValueForSearch = "";
+          break;
+
         default:
-          console.log("click", id); //获取到当前元素的i
+          console.log("click-default");
       }
     },
     /* start
@@ -1676,7 +1959,173 @@ export default {
         console.log("到底了", that.loadPage);
       }
     },
+    fn_load_myletterList() {
+      const that = this;
 
+      if (that.loadSign) {
+        that.loadSign = false;
+
+        that.loadPage++;
+
+        that.fn_get_my_letterList(sessionStorage.letterSearchType);
+
+        setTimeout(() => {
+          that.loadSign = true;
+        }, 1000);
+
+        console.log("到底了", that.loadPage);
+      }
+    },
+    fn_get_my_letterList(searchType) {
+      const that = this;
+      searchType = searchType || "agentName";
+      sessionStorage.letterSearchType = searchType;
+
+      that.fn_async_get_my_letterList(searchType).then(function(re) {
+        that.$$.console.black(
+          "admin >>>>>>>>> fn_get_my_userList >>>>>>>>>>>> " + re.data.msg
+        );
+
+        console.log(re.data);
+        if (re.data.code === "1") {
+          if (that.loadPage == 1) {
+            that.letterList = re.data.data; //显示默认可见的信息及登录者可修改的信息
+          } else {
+            that.letterList = that.letterList.concat(re.data.data); //显示默认可见的信息及登录者可修改的信息
+          }
+          console.log(re.data.data);
+        } else if (re.data.code === "-9") {
+          that.fn_alert("登录超时");
+          setTimeout(() => {
+            location.reload();
+          }, 2000);
+        } else {
+          that.fn_alert(re.data.msg);
+        }
+        //  that.webSet = re.data.data;
+      });
+    },
+    fn_delete_letter_by_id(_letterObj_) {
+      const that = this;
+      const letterID = _letterObj_.id;
+
+      this.$confirm("此操作将删除站内消息, 是否继续?", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning"
+      })
+        .then(() => {
+          that.fn_async_delete_letter_by_id(letterID).then(function(re) {
+            that.$$.console.black(
+              "admin >>>>>>>>> fn_delete_letter_by_id >>>>>>>>>>>> " +
+                re.data.msg
+            );
+            console.log(re.data);
+            if (re.data.code === "-9") {
+              that.fn_alert("登录超时");
+              setTimeout(() => {
+                location.reload();
+              }, 2000);
+            } else if (re.data.code === "1") {
+              that.letterList.forEach((element, index) => {
+                if (element === _letterObj_) {
+                  that.letterList.splice(index, 1);
+                }
+              });
+            } else {
+         
+            }
+                 that.fn_alert(re.data.msg);
+          });
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "已取消删除"
+          });
+        });
+    },
+    fn_add_letter(formName) {
+      const that = this;
+
+      this.$refs[formName].validate(valid => {
+        if (valid) {
+          that.fn_async_add_letter().then(function(re) {
+            that.$$.console.black(
+              "admin >>>>>>>>> fn_add_letter >>>>>>>>>>>> " + re.data.msg
+            );
+            console.log(re.data);
+            if (re.data.code === "-9") {
+              that.fn_alert("登录超时");
+              setTimeout(() => {
+                location.reload();
+              }, 2000);
+            } else if (re.data.code === "1") {
+              that.addLetter.visible = false;
+            } else {
+            }
+            that.fn_alert(re.data.msg);
+          });
+        } else {
+          console.log("error submit!!");
+          return false;
+        }
+      });
+    },
+    async fn_async_add_letter() {
+      const that = this;
+      const data_ = that.$qs.stringify({
+        type: "addLetter",
+        uid: that.userInfo.id,
+        token: that.userInfo.loginToken,
+        childID: that.addLetter.radio == "1" ? that.addLetter.userList : "all",
+        formKey: that.addLetter.title,
+        formValue: that.addLetter.content
+      });
+      try {
+        return await that.$axios.post(that.c_my_api.admin, data_);
+      } catch (error) {
+        console.log(that.c_my_api);
+        console.warn(error);
+      }
+    },
+    async fn_async_delete_letter_by_id(letterID) {
+      const that = this;
+      const data_ = that.$qs.stringify({
+        type: "deleteMyLetters",
+        uid: that.userInfo.id,
+        token: that.userInfo.loginToken,
+        childID: letterID
+      });
+      try {
+        return await that.$axios.post(that.c_my_api.admin, data_);
+      } catch (error) {
+        console.log(that.c_my_api);
+        console.warn(error);
+      }
+    },
+    async fn_async_get_my_letterList(searchType) {
+      const that = this;
+      const data_ = that.$qs.stringify({
+        type: "getMyLetters",
+        uid: that.userInfo.id,
+        token: that.userInfo.loginToken,
+        formKey: searchType,
+        formValue:
+          that.tempValueForSearch == ""
+            ? that.userInfo.userName
+            : that.tempValueForSearch,
+        sort: that.sortSelectPicked,
+        n: that.loadLimit,
+        page: that.loadPage
+      });
+      try {
+        return await that.$axios.post(that.c_my_api.admin, data_);
+      } catch (error) {
+        console.log(that.c_my_api);
+        console.warn(error);
+      }
+    },
     async fn_async_get_lottery_api_by_id(mark) {
       mark = mark + "MyLotteryApi";
       const that = this;
@@ -1896,6 +2345,19 @@ export default {
         console.log(that.c_my_api);
         console.warn(error);
       }
+    },
+    fn_true_alert(content, title, btn) {
+      title = title || "系统消息";
+      btn = btn || "确定";
+      this.$alert(content, title, {
+        confirmButtonText: btn,
+        callback: action => {
+          // this.$message({
+          //   type: "info",
+          //   message: `action: ${action}`
+          // });
+        }
+      });
     },
     fn_alert(msg) {
       this.$notify.info({
@@ -2235,7 +2697,7 @@ export default {
       console.log('his.$prompt("请输入", __data.keyCN');
 
       this.$prompt("请输入", __data.keyCN, {
-        closeOnClickModal:false,
+        closeOnClickModal: false,
         inputValue: __data.value,
         confirmButtonText: "确定",
         cancelButtonText: "取消"
@@ -2422,6 +2884,20 @@ export default {
           // always executed
         });
     },
+    fn_get_overview() {
+      const that = this;
+      that
+        .fn_async_website_overview(JSON.parse(localStorage.userInfo))
+        .then(function(response) {
+          const re = response.data;
+          console.log(re);
+          that.$$.console.red(">>> fn_async_website_overview >>> " + re.code);
+          if (re.code === "1") {
+            that.overview = re.data;
+          }
+          that.fn_alert_suc(re.msg);
+        });
+    },
     __loginInit(re) {
       const that = this;
 
@@ -2450,6 +2926,7 @@ export default {
         that.loginUserLimit = that.selectUserLimit[0];
         console.log(that.loginUserLimit);
       });
+      // that.fn_get_overview();
     },
     __login() {
       let that = this;
@@ -2559,6 +3036,21 @@ export default {
         console.warn(error);
       }
     },
+    async fn_async_website_overview(userInfoJson) {
+      const that = this;
+      const data_ = that.$qs.stringify({
+        type: "websiteOverview",
+        uid: userInfoJson.id,
+        childID: userInfoJson.id,
+        //childID: that.userInfo.userName,
+        token: userInfoJson.loginToken
+      });
+      try {
+        return await that.$axios.post(that.c_my_api.admin, data_);
+      } catch (error) {
+        console.warn(error);
+      }
+    },
     sortMethodUserID(a, b) {
       let c = a.userID - b.userID;
       // console.log(c);
@@ -2606,6 +3098,12 @@ body {
 }
 .bulletin {
   text-align: left;
+}
+.overview {
+  margin-left: 1em;
+}
+.overview b {
+  margin: auto 0.125em;
 }
 .height100 {
   max-height: 100%;
